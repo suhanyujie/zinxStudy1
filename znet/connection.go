@@ -8,26 +8,26 @@ import (
 )
 
 type Connection struct {
-	Conn *net.TCPConn
-	ConnId uint32
-	IsClosed bool
+	Conn      *net.TCPConn
+	ConnId    uint32
+	IsClosed  bool
 	handleAPI ziface.HandleFunc
-	ExitChan chan bool
+	ExitChan  chan bool
 }
 
 // 实例化自定义的链接
 func NewConnection(conn *net.TCPConn, cid uint32, callback ziface.HandleFunc) *Connection {
 	return &Connection{
-		Conn: conn,
-		ConnId: cid,
-		IsClosed: false,
+		Conn:      conn,
+		ConnId:    cid,
+		IsClosed:  false,
 		handleAPI: callback,
-		ExitChan: make(chan bool, 1),
+		ExitChan:  make(chan bool, 1),
 	}
 }
 
 // todo
-func (c *Connection) Start()  {
+func (c *Connection) Start() {
 	fmt.Println("new connection connected", c.ConnId)
 	// 启动读数据逻辑
 	go c.StartReader()
@@ -36,29 +36,31 @@ func (c *Connection) Start()  {
 }
 
 // 客户端链接的读逻辑
-func (c *Connection) StartReader()  {
+func (c *Connection) StartReader() {
 	fmt.Println("start reader goroutine")
 	defer c.Stop()
 	for true {
 		buf := make([]byte, 512)
 		cnt, err := c.Conn.Read(buf)
-		if err !=nil {
-			log.Printf("receive buf err: %s\n", err)
-			continue
+		if err != nil {
+			log.Printf("server receive buf err: %s\n", err)
+			// 连接出问题了，需关闭连接，这里如何主动关闭连接？
+			c.Stop()
+			break
 		}
-		if err := c.handleAPI(c.Conn, buf, cnt);err !=nil {
+		if err := c.handleAPI(c.Conn, buf, cnt); err != nil {
 			log.Printf("handle api err: %s\n", err)
 		}
 	}
 }
 
 // 客户端链接的写逻辑
-func (c *Connection) StartWriter()  {
+func (c *Connection) StartWriter() {
 	fmt.Println("start writer goroutine")
 }
 
 // todo
-func (c *Connection) Stop()  {
+func (c *Connection) Stop() {
 	fmt.Println("conn stop ConnID=", c.ConnId)
 	if c.IsClosed == true {
 		return
@@ -88,5 +90,5 @@ func (c *Connection) RemoteAddr() net.Addr {
 // todo
 func (c *Connection) Send(data []byte) error {
 
+	return nil
 }
-
