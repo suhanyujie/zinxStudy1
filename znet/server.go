@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"zinx_study1/utils"
 	"zinx_study1/ziface"
 )
 
@@ -101,8 +102,8 @@ func NewServer(name string) ziface.IServer {
 	s := &Server{
 		Name:      name,
 		IpVersion: "tcp4",
-		Ip:        "0.0.0.0",
-		Port:      3001,
+		Ip:        utils.GlobalObject.Host,
+		Port:      utils.GlobalObject.TcpPort,
 		Router:    nil,
 	}
 	return s

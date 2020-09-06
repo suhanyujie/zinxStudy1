@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"zinx_study1/utils"
 	"zinx_study1/ziface"
 )
 
@@ -43,7 +44,7 @@ func (c *Connection) StartReader() {
 	fmt.Println("start reader goroutine")
 	defer c.Stop()
 	for true {
-		buf := make([]byte, 512)
+		buf := make([]byte, utils.GlobalObject.MaxPkgSize)
 		_, err := c.Conn.Read(buf)
 		if err != nil {
 			log.Printf("server receive buf err: %s\n", err)
@@ -61,9 +62,6 @@ func (c *Connection) StartReader() {
 			c.Router.PreHandle(request)
 			c.Router.DoingHandle(request)
 			c.Router.AfterHandle(request)
-			//if err := c.handleAPI(c.Conn, buf, cnt); err != nil {
-			//	log.Printf("handle api err: %s\n", err)
-			//}
 		}(&req)
 	}
 }
