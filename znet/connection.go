@@ -8,21 +8,24 @@ import (
 )
 
 type Connection struct {
-	Conn      *net.TCPConn
-	ConnId    uint32
-	IsClosed  bool
-	handleAPI ziface.HandleFunc
-	ExitChan  chan bool
+	Conn     *net.TCPConn
+	ConnId   uint32
+	IsClosed bool
+	// handleAPI ziface.HandleFunc
+	ExitChan chan bool
+	// router
+	// router 和 handleAPI 是二选一的，作用是类似的
+	Router ziface.IRouter
 }
 
 // 实例化自定义的链接
-func NewConnection(conn *net.TCPConn, cid uint32, callback ziface.HandleFunc) *Connection {
+func NewConnection(conn *net.TCPConn, cid uint32, router ziface.IRouter) *Connection {
 	return &Connection{
-		Conn:      conn,
-		ConnId:    cid,
-		IsClosed:  false,
-		handleAPI: callback,
-		ExitChan:  make(chan bool, 1),
+		Conn:     conn,
+		ConnId:   cid,
+		Router:   router,
+		IsClosed: false,
+		ExitChan: make(chan bool, 1),
 	}
 }
 
@@ -41,16 +44,27 @@ func (c *Connection) StartReader() {
 	defer c.Stop()
 	for true {
 		buf := make([]byte, 512)
-		cnt, err := c.Conn.Read(buf)
+		_, err := c.Conn.Read(buf)
 		if err != nil {
 			log.Printf("server receive buf err: %s\n", err)
 			// 连接出问题了，需关闭连接，这里如何主动关闭连接？
 			c.Stop()
 			break
 		}
-		if err := c.handleAPI(c.Conn, buf, cnt); err != nil {
-			log.Printf("handle api err: %s\n", err)
+		// 根据读取到的数据，封装成 request
+		req := Request{
+			conn: c,
+			data: buf,
 		}
+		go func(request ziface.IRequest) {
+			// pre handle of route
+			c.Router.PreHandle(request)
+			c.Router.DoingHandle(request)
+			c.Router.AfterHandle(request)
+			//if err := c.handleAPI(c.Conn, buf, cnt); err != nil {
+			//	log.Printf("handle api err: %s\n", err)
+			//}
+		}(&req)
 	}
 }
 

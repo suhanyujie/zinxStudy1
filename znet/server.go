@@ -13,6 +13,7 @@ type Server struct {
 	IpVersion string
 	Ip        string
 	Port      int
+	Router    ziface.IRouter
 }
 
 // 对客户端的业务处理 暂时固定，后续优化
@@ -50,7 +51,7 @@ func (s *Server) Start() {
 			continue
 		}
 		var cid uint32
-		userConn := NewConnection(conn, cid, CallbackToClient)
+		userConn := NewConnection(conn, cid, s.Router)
 		cid++
 		// 开始处理当前请求的业务
 		go userConn.Start()
@@ -102,6 +103,11 @@ func NewServer(name string) ziface.IServer {
 		IpVersion: "tcp4",
 		Ip:        "0.0.0.0",
 		Port:      3001,
+		Router:    nil,
 	}
 	return s
+}
+
+func (s *Server) AddRoute(router ziface.IRouter) {
+	s.Router = router
 }
