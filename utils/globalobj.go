@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"os"
+	"strings"
 	"zinx_study1/ziface"
 )
 
@@ -39,11 +41,19 @@ func init() {
 }
 
 func (this *GlobalObj) GetConfigFromFile() {
-	data, err := ioutil.ReadFile("config/zinx.json")
+	configFile := "config/zinx.json"
+	if len(os.Args) > 1 {
+		cliParam1 := os.Args[1]
+		// 启动路径中包含 `core/conf` 后缀，表示是单测环境，否则就是普通的执行环境
+		if strings.HasSuffix(cliParam1, "-test.v") {
+			configFile = "./../config/zinx.json"
+		}
+	}
+	data, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		log.Fatalf("get config error: %s\n", err)
 	}
-	err = json.Unmarshal(data, &GlobalObject)
+	err = json.Unmarshal(data, GlobalObject)
 	if err != nil {
 		log.Fatalf("config data unmarshal error: %s\n", err)
 	}
