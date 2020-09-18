@@ -63,22 +63,37 @@ func TestPack(t *testing.T) {
 	index := 1
 	dp := NewDataPacker()
 	for {
+		// 数据在客户端封包
 		// 客户端写入数据
 		data := []byte("Hello world " + string(index))
-		msg := &Message{
+		msg1 := &Message{
 			Id:      1,
 			DataLen: uint32(len(data)),
 			Data:    data,
 			Headers: nil,
 			Body:    nil,
 		}
-		// 数据在客户端封包
-		data, err := dp.Pack(msg)
+		data1, err := dp.Pack(msg1)
 		if err != nil {
 			t.Logf("c1 pack data error: %s\n", err)
 			return
 		}
-		_, err = c1Conn.Write(data)
+		data = []byte("一起学习 zinx")
+		msg2 := &Message{
+			Id:      1,
+			DataLen: uint32(len(data)),
+			Data:    data,
+			Headers: nil,
+			Body:    nil,
+		}
+		data2, err := dp.Pack(msg2)
+		if err != nil {
+			t.Logf("c1 pack data error: %s\n", err)
+			return
+		}
+		// 模拟粘包
+		dataBytes := append(data1, data2...)
+		_, err = c1Conn.Write(dataBytes)
 		if err != nil {
 			t.Logf("c1 write data error: %s\n", err)
 			return
