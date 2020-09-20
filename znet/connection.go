@@ -17,21 +17,23 @@ type Connection struct {
 	ExitChan chan bool
 	// router
 	// router 和 handleAPI 是二选一的，作用是类似的
-	Router ziface.IRouter
+	// Router ziface.IRouter
+	// 集成消息路由管理
+	MsgHandler ziface.IMsgHandler
 }
 
 // 实例化自定义的链接
-func NewConnection(conn *net.TCPConn, cid uint32, router ziface.IRouter) *Connection {
+func NewConnection(conn *net.TCPConn, cid uint32, msgHandler ziface.IMsgHandler) *Connection {
 	return &Connection{
-		Conn:     conn,
-		ConnId:   cid,
-		Router:   router,
-		IsClosed: false,
-		ExitChan: make(chan bool, 1),
+		Conn:       conn,
+		ConnId:     cid,
+		MsgHandler: msgHandler,
+		IsClosed:   false,
+		ExitChan:   make(chan bool, 1),
 	}
 }
 
-// todo
+// 开始处理连接
 func (c *Connection) Start() {
 	fmt.Println("new connection connected", c.ConnId)
 	// 启动读数据逻辑
@@ -61,12 +63,16 @@ func (c *Connection) StartReader() {
 		_, err := io.ReadFull(c.Conn, headBuff)
 		if err != nil {
 			log.Printf("server receive head buf err: %s\n", err)
+			// 连接出问题了，需关闭连接，这里如何主动关闭连接？
+			c.Stop()
 			break
 		}
 		// 3.将 msg head 解包
 		msg, err := dp.UnPack(headBuff)
 		if err != nil {
 			log.Printf("server unpack head buf err: %s\n", err)
+			// 连接出问题了，需关闭连接，这里如何主动关闭连接？
+			c.Stop()
 			break
 		}
 		headMsgObj := msg.(*Message)
@@ -77,10 +83,14 @@ func (c *Connection) StartReader() {
 			_, err = io.ReadFull(c.Conn, dataBuff)
 			if err != nil {
 				log.Printf("server receive data buf err: %s\n", err)
+				// 连接出问题了，需关闭连接，这里如何主动关闭连接？
+				c.Stop()
 				break
 			}
 			if err != nil {
 				log.Printf("server unpack data buf err: %s\n", err)
+				// 连接出问题了，需关闭连接，这里如何主动关闭连接？
+				c.Stop()
 				break
 			}
 		}
@@ -91,12 +101,8 @@ func (c *Connection) StartReader() {
 			conn: c,
 			msg:  msg,
 		}
-		go func(request ziface.IRequest) {
-			// pre handle of route
-			c.Router.PreHandle(request)
-			c.Router.DoingHandle(request)
-			c.Router.AfterHandle(request)
-		}(&req)
+		// 寻找对应的处理 handler 并执行
+		c.MsgHandler.DoHandler(&req)
 	}
 }
 
@@ -105,7 +111,7 @@ func (c *Connection) StartWriter() {
 	fmt.Println("start writer goroutine")
 }
 
-// todo
+// 关闭服务时的处理
 func (c *Connection) Stop() {
 	fmt.Println("conn stop ConnID=", c.ConnId)
 	if c.IsClosed == true {
@@ -118,17 +124,17 @@ func (c *Connection) Stop() {
 	close(c.ExitChan)
 }
 
-// todo
+// 获取 tcp 的连接对象
 func (c *Connection) GetTcpConnection() *net.TCPConn {
 	return c.Conn
 }
 
-// todo
+// 获取链接的id
 func (c *Connection) GetConnId() uint32 {
 	return c.ConnId
 }
 
-// todo
+// 返回远程的连接地址
 func (c *Connection) RemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
 }
