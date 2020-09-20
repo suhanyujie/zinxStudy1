@@ -4,7 +4,8 @@ package ziface
 type IRequest interface {
 	// 获取连接
 	GetConnection() IConnection
-
 	// 获取用户请求的数据
 	GetData() []byte
+	// 获取消息数据的id
+	GetMsgId() uint32
 }
