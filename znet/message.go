@@ -8,6 +8,16 @@ type Message struct {
 	Body    []byte
 }
 
+func NewMessage(msgId uint32, data []byte) *Message {
+	return &Message{
+		Id:      msgId,
+		DataLen: uint32(len(data)),
+		Data:    data,
+		Headers: nil,
+		Body:    nil,
+	}
+}
+
 func (this *Message) SetMsgId(msgId uint32) {
 	this.Id = msgId
 }

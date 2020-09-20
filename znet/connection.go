@@ -1,10 +1,11 @@
 package znet
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
-	"zinx_study1/utils"
 	"zinx_study1/ziface"
 )
 
@@ -44,18 +45,51 @@ func (c *Connection) StartReader() {
 	fmt.Println("start reader goroutine")
 	defer c.Stop()
 	for true {
-		buf := make([]byte, utils.GlobalObject.MaxPkgSize)
-		_, err := c.Conn.Read(buf)
+		//buf := make([]byte, utils.GlobalObject.MaxPkgSize)
+		//_, err := c.Conn.Read(buf)
+		//if err != nil {
+		//	log.Printf("server receive buf err: %s\n", err)
+		//	// 连接出问题了，需关闭连接，这里如何主动关闭连接？
+		//	c.Stop()
+		//	break
+		//}
+		// 1.实例化封包解包器
+		dp := NewDataPacker()
+		headBuff := make([]byte, dp.GetHeaderLen())
+		// io.LimitReader()
+		// 2.从连接中读取 msg head 信息
+		_, err := io.ReadFull(c.Conn, headBuff)
 		if err != nil {
-			log.Printf("server receive buf err: %s\n", err)
-			// 连接出问题了，需关闭连接，这里如何主动关闭连接？
-			c.Stop()
+			log.Printf("server receive head buf err: %s\n", err)
 			break
 		}
+		// 3.将 msg head 解包
+		msg, err := dp.UnPack(headBuff)
+		if err != nil {
+			log.Printf("server unpack head buf err: %s\n", err)
+			break
+		}
+		headMsgObj := msg.(*Message)
+		var dataBuff []byte
+		if headMsgObj.GetMsgLen() > 0 {
+			// 根据 msg head 中的信息，读取数据
+			dataBuff = make([]byte, headMsgObj.DataLen)
+			_, err = io.ReadFull(c.Conn, dataBuff)
+			if err != nil {
+				log.Printf("server receive data buf err: %s\n", err)
+				break
+			}
+			if err != nil {
+				log.Printf("server unpack data buf err: %s\n", err)
+				break
+			}
+		}
+		msg.SetData(dataBuff)
+
 		// 根据读取到的数据，封装成 request
 		req := Request{
 			conn: c,
-			data: buf,
+			msg:  msg,
 		}
 		go func(request ziface.IRequest) {
 			// pre handle of route
@@ -99,8 +133,17 @@ func (c *Connection) RemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
 }
 
-// todo
-func (c *Connection) Send(data []byte) error {
-
-	return nil
+// 封包，然后将数据写到客户端
+func (c *Connection) SendMsg(msgId uint32, data []byte) error {
+	if c.IsClosed {
+		return errors.New("conn is closed! ")
+	}
+	dp := NewDataPacker()
+	msg := NewMessage(msgId, data)
+	binaryMsg, err := dp.Pack(msg)
+	if err != nil {
+		return err
+	}
+	_, err = c.GetTcpConnection().Write(binaryMsg)
+	return err
 }
