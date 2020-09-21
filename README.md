@@ -23,6 +23,9 @@ TCP 连接建立后，客户端以**流**的方式跟服务端进行通讯，此
 * 该模块具备一个属性：用于存放 msg id 和 router 的映射关系
 * 具备方法，1.增加路由到集合中，2.支持通过 msg id 映射到对应的 router 进行处理
 
+### v0.7
+请求连接的读写分离
+
 ## reference
 * 导入本地的包 https://www.cnblogs.com/wind-zhou/p/12824857.html
 * zinx 官方教程 https://www.bilibili.com/video/av71067087
