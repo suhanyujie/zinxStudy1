@@ -42,7 +42,7 @@ func (c *Connection) Start() {
 	// 启动读数据逻辑
 	go c.StartReader()
 	// 启动写数据逻辑
-	// go c.StartWriter()
+	go c.StartWriter()
 }
 
 // 客户端链接的读逻辑
@@ -50,14 +50,6 @@ func (c *Connection) StartReader() {
 	fmt.Println("start reader goroutine")
 	defer c.Stop()
 	for true {
-		//buf := make([]byte, utils.GlobalObject.MaxPkgSize)
-		//_, err := c.Conn.Read(buf)
-		//if err != nil {
-		//	log.Printf("server receive buf err: %s\n", err)
-		//	// 连接出问题了，需关闭连接，这里如何主动关闭连接？
-		//	c.Stop()
-		//	break
-		//}
 		// 1.实例化封包解包器
 		dp := NewDataPacker()
 		headBuff := make([]byte, dp.GetHeaderLen())
