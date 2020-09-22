@@ -20,6 +20,8 @@ type Connection struct {
 	// Router ziface.IRouter
 	// 集成消息路由管理
 	MsgHandler ziface.IMsgHandler
+	// 无缓冲通道，goroutine 之间的消息通信
+	msgChan chan []byte
 }
 
 // 实例化自定义的链接
@@ -30,6 +32,7 @@ func NewConnection(conn *net.TCPConn, cid uint32, msgHandler ziface.IMsgHandler)
 		MsgHandler: msgHandler,
 		IsClosed:   false,
 		ExitChan:   make(chan bool, 1),
+		msgChan:    make(chan []byte),
 	}
 }
 
@@ -39,7 +42,7 @@ func (c *Connection) Start() {
 	// 启动读数据逻辑
 	go c.StartReader()
 	// 启动写数据逻辑
-	// go c.StartWriter()
+	go c.StartWriter()
 }
 
 // 客户端链接的读逻辑
@@ -47,14 +50,6 @@ func (c *Connection) StartReader() {
 	fmt.Println("start reader goroutine")
 	defer c.Stop()
 	for true {
-		//buf := make([]byte, utils.GlobalObject.MaxPkgSize)
-		//_, err := c.Conn.Read(buf)
-		//if err != nil {
-		//	log.Printf("server receive buf err: %s\n", err)
-		//	// 连接出问题了，需关闭连接，这里如何主动关闭连接？
-		//	c.Stop()
-		//	break
-		//}
 		// 1.实例化封包解包器
 		dp := NewDataPacker()
 		headBuff := make([]byte, dp.GetHeaderLen())
@@ -108,7 +103,21 @@ func (c *Connection) StartReader() {
 
 // 客户端链接的写逻辑
 func (c *Connection) StartWriter() {
-	fmt.Println("start writer goroutine")
+	fmt.Println("writer goroutine is running")
+	defer fmt.Println(c.RemoteAddr().String(), "[conn writer exit!]")
+	// 阻塞等待 channel 消息
+	for {
+		select {
+		case data := <-c.msgChan:
+			if _, err := c.Conn.Write(data); err != nil {
+				log.Printf("writer goroutine send data error: %s\n", err)
+				return
+			}
+		case <-c.ExitChan:
+			// 代表 reader 退出
+			return
+		}
+	}
 }
 
 // 关闭服务时的处理
@@ -118,6 +127,8 @@ func (c *Connection) Stop() {
 		return
 	}
 	c.IsClosed = true
+	// 告诉 writer，连接关闭
+	c.ExitChan <- true
 	// 关闭 socket 链接
 	c.Conn.Close()
 	// 回收管道资源
@@ -150,6 +161,7 @@ func (c *Connection) SendMsg(msgId uint32, data []byte) error {
 	if err != nil {
 		return err
 	}
-	_, err = c.GetTcpConnection().Write(binaryMsg)
+	// _, err = c.GetTcpConnection().Write(binaryMsg)
+	c.msgChan <- binaryMsg
 	return err
 }

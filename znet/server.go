@@ -44,6 +44,7 @@ func (s *Server) Start() {
 	if err != nil {
 		log.Fatalf("listen tcp error: %s\n", err)
 	}
+	var cid uint32
 	//阻塞等待客户端链接
 	for {
 		conn, err := listenner.AcceptTCP()
@@ -51,7 +52,6 @@ func (s *Server) Start() {
 			log.Printf("Accpet connection error: %s\n", err)
 			continue
 		}
-		var cid uint32
 		userConn := NewConnection(conn, cid, s.MsgHandler)
 		cid++
 		// 开始处理当前请求的业务
