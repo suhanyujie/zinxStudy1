@@ -106,6 +106,7 @@ func NewServer(name string) ziface.IServer {
 		Port:       utils.GlobalObject.TcpPort,
 		MsgHandler: NewMsgHandler(),
 	}
+	s.MsgHandler.StartWorkPool(utils.GlobalObject.WorkPoolSize)
 	return s
 }
 

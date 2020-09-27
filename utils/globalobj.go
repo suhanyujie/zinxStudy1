@@ -22,6 +22,10 @@ type GlobalObj struct {
 	Version    string
 	MaxConn    int
 	MaxPkgSize uint32
+	// work pool size
+	WorkPoolSize uint32
+	// 每个 work 协程的任务数量限制
+	MaxTaskLenForOneWork uint32
 }
 
 var GlobalObject *GlobalObj
@@ -29,12 +33,14 @@ var GlobalObject *GlobalObj
 func init() {
 	// 实例化 global object
 	GlobalObject = &GlobalObj{
-		Name:       "Zinx default server",
-		Version:    "0.3",
-		Host:       "0.0.0.0",
-		TcpPort:    3001,
-		MaxConn:    10,
-		MaxPkgSize: 1024,
+		Name:                 "Zinx default server",
+		Version:              "0.3",
+		Host:                 "0.0.0.0",
+		TcpPort:              3001,
+		MaxConn:              10,
+		MaxPkgSize:           1024,
+		WorkPoolSize:         2,
+		MaxTaskLenForOneWork: 100,
 	}
 	// 从配置文件中加载配置
 	GlobalObject.GetConfigFromFile()
