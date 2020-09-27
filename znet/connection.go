@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"zinx_study1/utils"
 	"zinx_study1/ziface"
 )
 
@@ -96,8 +97,15 @@ func (c *Connection) StartReader() {
 			conn: c,
 			msg:  msg,
 		}
-		// 寻找对应的处理 handler 并执行
-		c.MsgHandler.DoHandler(&req)
+
+		if utils.GlobalObject.WorkPoolSize > 0 {
+			// 已经配置了工作池机制
+			// 将请求消息发送给 work 队列
+			c.MsgHandler.SendMsgToTaskQueue(&req)
+		} else {
+			// 寻找对应的处理 handler 并执行
+			go c.MsgHandler.DoHandler(&req)
+		}
 	}
 }
 

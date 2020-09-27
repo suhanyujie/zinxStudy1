@@ -26,6 +26,14 @@ TCP 连接建立后，客户端以**流**的方式跟服务端进行通讯，此
 ### v0.7
 请求连接的读写分离
 
+### v0.8
+引入消息队列/协程池，将处理业务的协程的数量固定下来，以免协程数太多导致协程切换资源开销太大
+
+#### step
+* 在 MsgHandler 中添加协程池数量 WorkPoolSize，存储请求的队列 TaskQueue 等属性
+* 根据属性配置，创建协程
+* 将客户端请求接入队列
+
 ## reference
 * 导入本地的包 https://www.cnblogs.com/wind-zhou/p/12824857.html
 * zinx 官方教程 https://www.bilibili.com/video/av71067087
