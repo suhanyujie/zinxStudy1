@@ -45,6 +45,8 @@ func NewConnection(server ziface.IServer, conn *net.TCPConn, cid uint32, msgHand
 // 开始处理连接
 func (c *Connection) Start() {
 	fmt.Println("new connection connected", c.ConnId)
+	// 调用设定的"连接开始 hook"
+	c.TcpServer.CallOnConnStartFunc(c)
 	// 启动读数据逻辑
 	go c.StartReader()
 	// 启动写数据逻辑
@@ -148,6 +150,8 @@ func (c *Connection) Stop() {
 	close(c.ExitChan)
 	// 将当前连接从连接管理器中移除
 	c.TcpServer.GetConnManager().Remove(c)
+	// 调用设定的"关闭连接 hook"
+	c.TcpServer.CallOnConnStopFunc(c)
 }
 
 // 获取 tcp 的连接对象
