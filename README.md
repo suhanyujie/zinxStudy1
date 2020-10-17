@@ -45,6 +45,16 @@ TCP 连接建立后，客户端以**流**的方式跟服务端进行通讯，此
 ### v0.9.1
 提供 api，供开发者注册连接开始、关闭的 hook
 
+* 每次启动一个服务器，都会注册 onStart、onStop 方法
+
+### v0.10
+提供向连接中存储属性值的 api
+
+* 处理连接过程中，可以调用连接上的 SetProperty、GetProperty 方法
+
+### v0.11
+- todo
+
 ## reference
 * 导入本地的包 https://www.cnblogs.com/wind-zhou/p/12824857.html
 * zinx 官方教程 https://www.bilibili.com/video/av71067087
