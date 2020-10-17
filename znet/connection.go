@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 	"zinx_study1/utils"
 	"zinx_study1/ziface"
 )
@@ -25,18 +26,24 @@ type Connection struct {
 	MsgHandler ziface.IMsgHandler
 	// 无缓冲通道，goroutine 之间的消息通信
 	msgChan chan []byte
+	// 为了给开发者提供更大的灵活性，遂给每个连接定义一个属性集合，开发者使用时，可以在对应的链接中设定属性、删除属性
+	property map[string]interface{}
+	// 因为属性需要读写操作，为了数据安全性，加上一个锁进行保护
+	propertyLock sync.RWMutex
 }
 
 // 实例化自定义的链接
 func NewConnection(server ziface.IServer, conn *net.TCPConn, cid uint32, msgHandler ziface.IMsgHandler) *Connection {
 	userConn := &Connection{
-		TcpServer:  server,
-		Conn:       conn,
-		ConnId:     cid,
-		IsClosed:   false,
-		ExitChan:   make(chan bool, 1),
-		MsgHandler: msgHandler,
-		msgChan:    make(chan []byte),
+		TcpServer:    server,
+		Conn:         conn,
+		ConnId:       cid,
+		IsClosed:     false,
+		ExitChan:     make(chan bool, 1),
+		MsgHandler:   msgHandler,
+		msgChan:      make(chan []byte),
+		property:     make(map[string]interface{}),
+		propertyLock: sync.RWMutex{},
 	}
 	server.GetConnManager().Add(userConn)
 	return userConn
@@ -183,4 +190,26 @@ func (c *Connection) SendMsg(msgId uint32, data []byte) error {
 	// _, err = c.GetTcpConnection().Write(binaryMsg)
 	c.msgChan <- binaryMsg
 	return err
+}
+
+// 向连接中存储属性
+func (_this *Connection) SetProperty(key string, value interface{}) {
+	_this.propertyLock.Lock()
+	defer _this.propertyLock.Unlock()
+	_this.property[key] = value
+	if val, ok := _this.property[key]; ok {
+		log.Printf("set property ok: %v\n", val)
+	} else {
+		log.Printf("set property not ok\n")
+	}
+}
+
+// 获取属性值
+func (_this *Connection) GetProperty(key string) (interface{}, error) {
+	_this.propertyLock.Lock()
+	defer _this.propertyLock.Unlock()
+	if value, ok := _this.property[key]; ok {
+		return value, nil
+	}
+	return nil, errors.New("value not found. ")
 }
