@@ -10,12 +10,18 @@ import (
 
 //IServer 的接口实现
 type Server struct {
-	Name        string
-	IpVersion   string
-	Ip          string
-	Port        int
-	MsgHandler  ziface.IMsgHandler
+	Name      string
+	IpVersion string
+	Ip        string
+	Port      int
+	// 消息管理，路由等
+	MsgHandler ziface.IMsgHandler
+	// 连接管理器
 	ConnManager ziface.IConnManager
+	// 连接开始 hook
+	OnConnStartFunc func(conn ziface.IConnection)
+	// 连接销毁 hook
+	OnConnStopFunc func(conn ziface.IConnection)
 }
 
 // 对客户端的业务处理 暂时固定，后续优化
@@ -105,4 +111,24 @@ func (s *Server) AddRoute(msgId uint32, router ziface.IRouter) {
 // 获取连接管理器
 func (_this *Server) GetConnManager() ziface.IConnManager {
 	return _this.ConnManager
+}
+
+func (_this *Server) SetOnConnStartFunc(hook func(conn ziface.IConnection)) {
+	_this.OnConnStartFunc = hook
+}
+
+func (_this *Server) SetOnConnStopFunc(hook func(conn ziface.IConnection)) {
+	_this.OnConnStopFunc = hook
+}
+
+func (_this *Server) CallOnConnStartFunc(conn ziface.IConnection) {
+	if _this.OnConnStartFunc != nil {
+		_this.OnConnStartFunc(conn)
+	}
+}
+
+func (_this *Server) CallOnConnStopFunc(conn ziface.IConnection) {
+	if _this.OnConnStartFunc != nil {
+		_this.OnConnStartFunc(conn)
+	}
 }

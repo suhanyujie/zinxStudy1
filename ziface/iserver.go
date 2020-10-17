@@ -11,4 +11,9 @@ type IServer interface {
 	AddRoute(msgId uint32, router IRouter)
 
 	GetConnManager() IConnManager
+
+	SetOnConnStartFunc(func(conn IConnection))
+	SetOnConnStopFunc(func(conn IConnection))
+	CallOnConnStartFunc(conn IConnection)
+	CallOnConnStopFunc(conn IConnection)
 }
