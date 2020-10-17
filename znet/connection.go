@@ -11,9 +11,11 @@ import (
 )
 
 type Connection struct {
-	Conn     *net.TCPConn
-	ConnId   uint32
-	IsClosed bool
+	// 当前连接 属于哪个 server
+	TcpServer ziface.IServer
+	Conn      *net.TCPConn
+	ConnId    uint32
+	IsClosed  bool
 	// handleAPI ziface.HandleFunc
 	ExitChan chan bool
 	// router
@@ -26,15 +28,18 @@ type Connection struct {
 }
 
 // 实例化自定义的链接
-func NewConnection(conn *net.TCPConn, cid uint32, msgHandler ziface.IMsgHandler) *Connection {
-	return &Connection{
+func NewConnection(server ziface.IServer, conn *net.TCPConn, cid uint32, msgHandler ziface.IMsgHandler) *Connection {
+	userConn := &Connection{
+		TcpServer:  server,
 		Conn:       conn,
 		ConnId:     cid,
-		MsgHandler: msgHandler,
 		IsClosed:   false,
 		ExitChan:   make(chan bool, 1),
+		MsgHandler: msgHandler,
 		msgChan:    make(chan []byte),
 	}
+	server.GetConnManager().Add(userConn)
+	return userConn
 }
 
 // 开始处理连接
@@ -141,6 +146,8 @@ func (c *Connection) Stop() {
 	c.Conn.Close()
 	// 回收管道资源
 	close(c.ExitChan)
+	// 将当前连接从连接管理器中移除
+	c.TcpServer.GetConnManager().Remove(c)
 }
 
 // 获取 tcp 的连接对象

@@ -10,11 +10,12 @@ import (
 
 //IServer 的接口实现
 type Server struct {
-	Name       string
-	IpVersion  string
-	Ip         string
-	Port       int
-	MsgHandler ziface.IMsgHandler
+	Name        string
+	IpVersion   string
+	Ip          string
+	Port        int
+	MsgHandler  ziface.IMsgHandler
+	ConnManager ziface.IConnManager
 }
 
 // 对客户端的业务处理 暂时固定，后续优化
@@ -44,7 +45,8 @@ func (s *Server) Start() {
 	if err != nil {
 		log.Fatalf("listen tcp error: %s\n", err)
 	}
-	var cid uint32
+	// 设定一个连接id
+	var cid uint32 = 1
 	//阻塞等待客户端链接
 	for {
 		conn, err := listenner.AcceptTCP()
@@ -52,40 +54,25 @@ func (s *Server) Start() {
 			log.Printf("Accpet connection error: %s\n", err)
 			continue
 		}
-		userConn := NewConnection(conn, cid, s.MsgHandler)
+		// 当前连接数是否过大
+		if s.ConnManager.Len() >= utils.GlobalObject.MaxConn {
+			// todo 给客户端返回一个，服务连接数过大的提示
+			log.Printf("Too many connection. Can't deal with it. \n")
+			conn.Close()
+			continue
+		}
+		userConn := NewConnection(s, conn, cid, s.MsgHandler)
 		cid++
 		// 开始处理当前请求的业务
 		go userConn.Start()
-
-		// 原始处理：
-		// 对客户端连接进行一些读写操作
-		// 基于 tcp 的连接是全双工的，可以收信息也能发信息
-		//go func() {
-		//	for  {
-		//		buffer := make([]byte, 512)
-		//		cnt, err := conn.Read(buffer)
-		//		if err != nil {
-		//			log.Printf("read client data error: %s\n", err)
-		//			conn.Close()
-		//			break
-		//		}
-		//		// debug 打印一些信息
-		//		log.Println(string(buffer))
-		//		// 回写操作
-		//		cnt, err = conn.Write(buffer[:cnt])
-		//		if err != nil {
-		//			log.Printf("write data into client error: %s\n", err)
-		//			conn.Close()
-		//			break
-		//		}
-		//	}
-		//}()
 	}
 }
 
 // 停止
 func (s *Server) Stop() {
-	// todo 进行将资源回收等操作
+	// 进行资源回收等操作
+	s.ConnManager.ClearConn()
+	log.Printf("server stop, clear all the connections.\n")
 	return
 }
 
@@ -100,11 +87,12 @@ func (s *Server) Serve() {
 // 实例化 server
 func NewServer(name string) ziface.IServer {
 	s := &Server{
-		Name:       name,
-		IpVersion:  "tcp4",
-		Ip:         utils.GlobalObject.Host,
-		Port:       utils.GlobalObject.TcpPort,
-		MsgHandler: NewMsgHandler(),
+		Name:        name,
+		IpVersion:   "tcp4",
+		Ip:          utils.GlobalObject.Host,
+		Port:        utils.GlobalObject.TcpPort,
+		MsgHandler:  NewMsgHandler(),
+		ConnManager: NewConnManager(),
 	}
 	s.MsgHandler.StartWorkPool(utils.GlobalObject.WorkPoolSize)
 	return s
@@ -112,4 +100,9 @@ func NewServer(name string) ziface.IServer {
 
 func (s *Server) AddRoute(msgId uint32, router ziface.IRouter) {
 	s.MsgHandler.AddRouter(msgId, router)
+}
+
+// 获取连接管理器
+func (_this *Server) GetConnManager() ziface.IConnManager {
+	return _this.ConnManager
 }
