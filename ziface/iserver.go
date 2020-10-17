@@ -9,4 +9,6 @@ type IServer interface {
 	// func for router
 	// regist a route in this server
 	AddRoute(msgId uint32, router IRouter)
+
+	GetConnManager() IConnManager
 }

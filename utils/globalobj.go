@@ -17,7 +17,6 @@ type GlobalObj struct {
 	Host      string
 	TcpPort   int
 	Name      string
-
 	// Zinx
 	Version    string
 	MaxConn    int
@@ -46,6 +45,7 @@ func init() {
 	GlobalObject.GetConfigFromFile()
 }
 
+// 从配置文件中加载配置
 func (this *GlobalObj) GetConfigFromFile() {
 	configFile := "config/zinx.json"
 	if len(os.Args) > 1 {
